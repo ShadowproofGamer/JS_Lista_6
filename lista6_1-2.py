@@ -1,4 +1,4 @@
-import datetime, re
+import re
 
 # z1 
 
@@ -54,17 +54,6 @@ class SSHLogError(SSHLogEntry):
 class SSHLogOther(SSHLogEntry):
     def __init__(self, time:str, description:str, pid:int, host_name =""):
         super().__init__(time, description, pid, host_name)
-
-
-
-
-
-
-
-
-
-
-
 
 
 
