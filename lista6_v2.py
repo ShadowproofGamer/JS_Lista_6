@@ -1,12 +1,14 @@
 import re, abc
 
 class IPv4Address:
+    #przechowuje oktety w formie dziesiętnej w tabeli
     def __init__(self, ipv4:str):
-        self.ip_addr = ipv4.split(".")
+        self.ip_addr = [int(n) for n in ipv4.split(".")]
     def __str__(self):
-        return "{}.{}.{}.{}".format(self.ip_addr[0], self.ip_addr[1], self.ip_addr[2], self.ip_addr[3])
+        return "{}.{}.{}.{}".format(str(self.ip_addr[0]), str(self.ip_addr[1]), str(self.ip_addr[2]), str(self.ip_addr[3]))
     
 class SSHTime:
+    #dzieli reprezentację tekstową na składowe
     def __init__(self, _value:str) -> None:
         self.month = re.search(r'^\w{3}', _value).group(0)
         self.day = re.search(r'(?<=^\w{3} {1})\w*|(?<=^\w{3} {2})\w*', _value).group(0)
@@ -14,6 +16,7 @@ class SSHTime:
         self.minute = re.search(r'(?<=^\w{3} {1}\w{2} \w{2}:)\w{2}|(?<=^\w{3} {2}\w \w{2}:)\w{2}', _value).group(0)
         self.second = re.search(r'(?<=^\w{3} {1}\w{2} \w{2}:\w{2}:)\w{2}|(?<=^\w{3} {2}\w \w{2}:\w{2}:)\w{2}', _value).group(0)
     
+    #zwraca str(SSHTime)
     def __str__(self) -> str:
         return "{} {} {}:{}:{}".format(self.month, self.day, self.hour, self.minute, self.second)
     
@@ -196,29 +199,48 @@ class SSHLogJournal:
         #print(re.search(date_pattern, _repr))
         temp_type = re.search(type_pattern, _repr).group(0)
         temp_raw = re.search(raw_pattern, _repr).group(0)
+        date_pattern = r'(?<=time=).*(?=, raw=)'
+        pid_pattern = r'(?<=pid=)\w+'
+        host_pattern = r'(?<=host_name=)\w*'
+        #print(re.search(date_pattern, _repr))
+        temp_type = re.search(type_pattern, _repr).group(0)
+        temp_time = re.search(date_pattern, _repr).group(0)
+        temp_raw = re.search(raw_pattern, _repr).group(0)
+        temp_pid = re.search(pid_pattern, _repr).group(0)
+        temp_host = re.search(host_pattern, _repr).group(0)
         #if(re.search(host_pattern, _repr)):temp_host = re.search(host_pattern, _repr).group(0)
         if temp_type=="SSHLogFailed":
             new_object = SSHLogFailed(temp_raw)
+            new_object.time=SSHTime(temp_time)
+            new_object.pid=int(temp_pid)
+            new_object.host_name=temp_host
             if(new_object.validate()):
                 self._logs.append(new_object)
         elif temp_type=="SSHLogAccepted":
             new_object = SSHLogAccepted(temp_raw)
+            new_object.time=SSHTime(temp_time)
+            new_object.pid=int(temp_pid)
+            new_object.host_name=temp_host
             if(new_object.validate()):
                 self._logs.append(new_object)
         elif temp_type =="SSHLogError":
-             new_object = SSHLogError(temp_raw)
-             if(new_object.validate()):
-                self._logs.append(new_object)
+            new_object = SSHLogError(temp_raw)
+            new_object.time=SSHTime(temp_time)
+            new_object.pid=int(temp_pid)
+            new_object.host_name=temp_host
+            if(new_object.validate()):
+               self._logs.append(new_object)
         
         
     
     def logs_by_ip(self, ip:str):
-        temp_list = []
+        result_list = []
         for i in self._logs:
+            #sprawdza czy log ma ip jeśli ma to sprawdza czy to ip zgadza sie z podanym
             if(i.get_ipv4()):
                 if(str(i.get_ipv4())==ip):
-                    temp_list.append(i)
-        return temp_list
+                    result_list.append(i)
+        return result_list
 
 
 
@@ -250,13 +272,18 @@ print(SSHTime("Dec 10 11:03:44"))
 print(repr(test1))
 print(test1)
 print(test2)
-#print(test2.validate())
 print(test3)
+
+
+test5.pid=357
 print(test5)
 
+#dodajemy obiekty za pomocą ich reprezentacji do SSHLogJournal
 container.append(repr(test1))
 container.append(repr(test2))
 container.append(repr(test3))
+
+#zmiana pid powoduje odrzucenie przez validate()
 container.append(repr(test5))
 
 print("\nwpisy po ip 103.99.0.122:\n", container.logs_by_ip("103.99.0.122"), "\n")
@@ -266,11 +293,13 @@ for i in container:
     lista.append(i)
 
 
-
+#dodajemy SSHUser do listy
 lista.append(test4)
 
+#validate zwróci false dla testu 1
+lista[0].pid=567
 
-
+#wypisujemy wyniki validate()
 index=1
 for i in lista:
     print("test"+str(index), i.validate())
